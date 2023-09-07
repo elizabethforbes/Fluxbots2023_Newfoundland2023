@@ -1,0 +1,27 @@
+Date,Name,UTM Zone (North/South),Easting (m),Northing (m),Altitude (m),Notes
+2022-08-01 15:56:52.71,TN-Excl-bluehill-C,22 N,281180.0,5387244.7,109.0248257275671,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 3 m"
+2022-08-01 16:38:40.04,TN-Excl-bluehill-E,22 N,281126.4,5387204.7,98.85514105856419,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 3 m"
+2023-06-16 14:32:52.21,TN-excl-bluehillWest,22 N,279276.3,5386116.2,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 8 m"
+2023-06-15 08:39:58.58,TN-excl-ochre,22 N,281628.7,5377164.6,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 4 m"
+2023-06-16 13:09:15.53,TN-fire gap-bluehillWest,22 N,279194.3,5385844.6,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 4 m"
+2023-06-15 14:13:04.49,TN-gap-big-bluehill,22 N,282591.7,5387449.4,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 4 m"
+2023-06-14 11:46:31.78,TN-gap-bluehillEast,22 N,281311.8,5387225.5,0,"Horizontal Accuracy: ± 4 m
+Vertical Accuracy: ± 3 m"
+2023-06-14 12:24:17.75,TN-gap-bluehillSouth,22 N,281431.4,5387075.6,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 4 m"
+2023-06-15 09:19:16.01,TN-gap-ochre,22 N,281538.3,5377232.2,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 3 m"
+2023-06-15 15:55:07.89,TN-mature-bluehillWest,22 N,280608.6,5386549.2,0,"Horizontal Accuracy: ± 4 m
+Vertical Accuracy: ± 6 m"
+2023-06-15 11:11:13.75,TN-mature-ochre,22 N,281739.9,5376989.7,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 4 m"
+2023-06-15 14:08:47.76,TN-mature1-bluehill,22 N,282709.7,5387533.5,0,"Horizontal Accuracy: ± 4 m
+Vertical Accuracy: ± 6 m"
+2023-06-16 13:56:56.63,TN-mature2-BlueHillWest,22 N,279350.1,5385976.9,0,"Horizontal Accuracy: ± 5 m
+Vertical Accuracy: ± 4 m"
