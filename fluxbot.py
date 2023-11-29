@@ -9,27 +9,42 @@ import plotly
 from scipy import optimize
 import math
 
+## DATA PROCESSING: fluxbot 3.0, deployments in Newfoundland Canada and Harvard Forest (MA, USA)
+
+# treatments = {
+#     'MWC': 'Full Exclusion',
+#     'MW': 'Megafauna + Cattle Exclusion',
+#     'C': 'Control',
+#     'O': 'Cattle Only'
+# }
+
 treatments = {
-    'MWC': 'Full Exclusion',
-    'MW': 'Megafauna + Cattle Exclusion',
-    'C': 'Control',
-    'O': 'Cattle Only'
+    'timber': 'timber harvest gap',
+    'insect': 'insect outbreak gap',
+    'exclosure': 'moose exclosure',
+    'mature': 'mature forest'
 }
 
 locations = {
-    'OM': 'Termite Soil',
-    'UT': 'Under Tree',
-    'OS': 'Open Soil'
+    'TNNP': 'Terra Nova National Park',
+    'GMNP': 'Gros Morne National Park',
+    'HF': 'Harvard Forest'
 }
 
-blocks = {
-    'C': 'Central',
-    'N': 'Northern',
-    'S': 'Southern'
-}
+# locations = {
+#     'OM': 'Termite Soil',
+#     'UT': 'Under Tree',
+#     'OS': 'Open Soil'
+# }
 
-FLUXBOT_VOLUME = 2758   # cm^3 of fluxbot chamber
-FLUXBOT_AREA = 145.5    # cm^2 area of fluxbot bottom
+# blocks = {
+#     'C': 'Central',
+#     'N': 'Northern',
+#     'S': 'Southern'
+# }
+
+FLUXBOT_VOLUME = 768 # cm^3 of fluxbot 3.0 chamber; estimated using height of chamber once installed, and CAD files of internal fluxbot components
+FLUXBOT_AREA = 81   # cm^2 area of fluxbot 3.0 chamber (4in internal diameter collar)
 
 # Gas Law Constants:
 R_m = 8.314472  # Ideal gas constant for mass [(m^3*Pa)/(K*mol)]
