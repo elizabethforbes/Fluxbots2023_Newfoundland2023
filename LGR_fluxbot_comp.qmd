@@ -1,0 +1,8 @@
+---
+title: "LGR_fluxbot_comparison"
+format: html
+editor: visual
+---
+
+## LGR and fluxbot comparison: LGR plugged into fluxbot 20 chamber for direct comparison of fluxes, raw data collection
+

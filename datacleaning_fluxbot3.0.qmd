@@ -1,0 +1,58 @@
+---
+title: "fluxbot3.0_datacleaning"
+format: html
+editor: visual
+---
+
+Libraries:
+```{r}
+library(tidyverse)
+library(ggpubr)
+library(readxl)
+```
+ 
+
+## Upload and clean data from Google Sheets:
+```{r}
+
+read_excel_allsheets <- function(filename) {
+  sheets <- readxl::excel_sheets(filename)
+  x <-    lapply(sheets, function(X) readxl::read_excel(filename, sheet = X))
+  names(x) <- sheets
+  x
+}
+
+rawco2_alldat <- read_excel_allsheets("fluxbot_co2.xlsx")
+rawRH_alldat <- read_excel_allsheets("fluxbot_humidity.xlsx")
+rawP_alldat <- read_excel_allsheets("fluxbot_pressure.xlsx")
+rawT_alldat <- read_excel_allsheets("fluxbot_temperature.xlsx")
+
+# Prefix to be added
+prefix_co2 <- "co2_"
+prefix_RH <- "RH_"
+prefix_P <- "P_"
+prefix_T <- "T_"
+
+# Append prefix to the names of all elements in the list
+new_names <- paste0(prefix_co2, names(rawco2_alldat))
+
+# Rename the elements in the list with the new names
+names(rawco2_alldat) <- new_names
+
+list2env(rawco2_alldat, .GlobalEnv)
+list2env(rawRH_alldat, .GlobalEnv)
+list2env(rawP_alldat, .GlobalEnv)
+list2env(rawT_alldat, .GlobalEnv)
+
+```
+
+## Process raw data into long-form using custom function in this folder:
+```{r}
+
+```
+
+## separate out Newfoundland data from Harvard Forest data:
+```{r}
+
+```
+
