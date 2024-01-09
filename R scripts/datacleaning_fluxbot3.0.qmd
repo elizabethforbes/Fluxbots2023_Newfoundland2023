@@ -5,14 +5,19 @@ editor: visual
 ---
 
 Libraries:
+
 ```{r}
 library(tidyverse)
 library(ggpubr)
 library(readxl)
+library(here)
+library(xts) # for "make.index.unique" function when cleaning raw data
+library(purrr)
+library(lubridate) # timestamp shenanigans
 ```
- 
 
 ## Upload and clean data from Google Sheets:
+
 ```{r}
 
 read_excel_allsheets <- function(filename) {
@@ -22,10 +27,10 @@ read_excel_allsheets <- function(filename) {
   x
 }
 
-rawco2_alldat <- read_excel_allsheets("fluxbot_co2.xlsx")
-rawRH_alldat <- read_excel_allsheets("fluxbot_humidity.xlsx")
-rawP_alldat <- read_excel_allsheets("fluxbot_pressure.xlsx")
-rawT_alldat <- read_excel_allsheets("fluxbot_temperature.xlsx")
+rawco2_alldat <- read_excel_allsheets(here("fluxbot data 2023", "fluxbot_co2.xlsx"))
+rawRH_alldat <- read_excel_allsheets(here("fluxbot data 2023","fluxbot_humidity.xlsx")) 
+rawP_alldat <- read_excel_allsheets(here("fluxbot data 2023","fluxbot_pressure.xlsx"))
+rawT_alldat <- read_excel_allsheets(here("fluxbot data 2023","fluxbot_temperature.xlsx"))
 
 # Prefix to be added
 prefix_co2 <- "co2_"
@@ -34,25 +39,142 @@ prefix_P <- "P_"
 prefix_T <- "T_"
 
 # Append prefix to the names of all elements in the list
-new_names <- paste0(prefix_co2, names(rawco2_alldat))
-
 # Rename the elements in the list with the new names
+new_names <- paste0(prefix_co2, names(rawco2_alldat))
 names(rawco2_alldat) <- new_names
-
 list2env(rawco2_alldat, .GlobalEnv)
+
+new_names <- paste0(prefix_RH, names(rawRH_alldat))
+names(rawRH_alldat) <- new_names
 list2env(rawRH_alldat, .GlobalEnv)
+
+new_names <- paste0(prefix_P, names(rawP_alldat))
+names(rawP_alldat) <- new_names
 list2env(rawP_alldat, .GlobalEnv)
+
+new_names <- paste0(prefix_T, names(rawT_alldat))
+names(rawT_alldat) <- new_names
 list2env(rawT_alldat, .GlobalEnv)
 
 ```
 
+## January 10th, 2024: processing fluxbot 20 data for Connor's engineering paper (comparison of LGR versus fluxbot flux estimates, data collected in October 2023)
+```{r fluxbot20}
+
+clean_raw_data <- function(df, var1, var2){
+  df %>%     
+    select({{var1}}, {{var2}}) %>%
+    mutate(id=1:n()) %>% 
+    separate_rows(c({{var1}}, {{var2}}), sep = c("[", "]", ",")) %>% 
+    group_by(id) %>% 
+    mutate(Var = 1:n()) %>% 
+    pivot_longer(-c(id,Var))
+}
+                    
+co2_f20_long <- clean_raw_data(co2_fluxbot_20, `device timestamps`, co2)
+
+RH_f20_long <- clean_raw_data(RH_fluxbot_20, humidity)
+P_f20_long <- clean_raw_data(P_fluxbot_20, pressure)
+T_f20_long <- clean_raw_data(T_fluxbot_20, temprerature)
+
+# merge for datasets into one by timestamp
+f20 <- purrr::reduce(list(co2_f20_long,
+                          RH_f20_long,
+                          P_f20_long,
+                          T_f20_long),
+                     dplyr::left_join, by = 'Timestamp_new')
+```
+
+Going to try it a different way (without custom function) for fluxbot 20:
+```{r}
+# FLUXBOT 20, CO2
+co2_f20_long <- co2_fluxbot_20 %>%
+    separate_longer_delim(co2, delim = "[") %>%
+    separate_longer_delim(co2, delim = "]") %>%
+    separate_longer_delim(co2, delim = ",") %>% 
+    filter(co2 != "")
+timestamps_long <- co2_fluxbot_20 %>%
+    separate_longer_delim(`device timestamps`, delim = "[") %>%
+    separate_longer_delim(`device timestamps`, delim = "]") %>%
+    separate_longer_delim(`device timestamps`, delim = ",") %>% 
+  filter(`device timestamps` != "")
+
+co2_f20_long <- cbind(timestamps_long$`device timestamps`, co2_f20_long$co2)
+colnames(co2_f20_long) <- c("UNIXtime", "co2ppm")
+co2_f20_long <- as.data.frame(co2_f20_long)
+
+# FLUXBOT 20, PRESSURE
+P_f20_long <- P_fluxbot_20 %>%
+    separate_longer_delim(pressure, delim = "[") %>%
+    separate_longer_delim(pressure, delim = "]") %>%
+    separate_longer_delim(pressure, delim = ",") %>% 
+    filter(pressure != "")
+timestamps_long <- P_fluxbot_20 %>%
+    separate_longer_delim(`device timestamps`, delim = "[") %>%
+    separate_longer_delim(`device timestamps`, delim = "]") %>%
+    separate_longer_delim(`device timestamps`, delim = ",") %>% 
+  filter(`device timestamps` != "")
+
+P_f20_long <- cbind(timestamps_long$`device timestamps`, P_f20_long$pressure)
+colnames(P_f20_long) <- c("UNIXtime", "pressure")
+P_f20_long <- as.data.frame(P_f20_long)
+
+# FLUXBOT 20, RELATIVE HUMIDITY
+rh_f20_long <- RH_fluxbot_20 %>%
+    separate_longer_delim(humidity, delim = "[") %>%
+    separate_longer_delim(humidity, delim = "]") %>%
+    separate_longer_delim(humidity, delim = ",") %>% 
+    filter(humidity != "")
+timestamps_long <- RH_fluxbot_20 %>%
+    separate_longer_delim(`device timestamps`, delim = "[") %>%
+    separate_longer_delim(`device timestamps`, delim = "]") %>%
+    separate_longer_delim(`device timestamps`, delim = ",") %>% 
+  filter(`device timestamps` != "")
+
+RH_f20_long <- cbind(timestamps_long$`device timestamps`, RH_f20_long$humidity)
+colnames(RH_f20_long) <- c("UNIXtime", "humidity")
+RH_f20_long <- as.data.frame(RH_f20_long)
+
+# FLUXBOT 20, TEMPERATURE
+T_f20_long <- T_fluxbot_20 %>%
+    separate_longer_delim(temprerature, delim = "[") %>%
+    separate_longer_delim(temprerature, delim = "]") %>%
+    separate_longer_delim(temprerature, delim = ",") %>% 
+    filter(temprerature != "")
+timestamps_long <- T_fluxbot_20 %>%
+    separate_longer_delim(`device timestamps`, delim = "[") %>%
+    separate_longer_delim(`device timestamps`, delim = "]") %>%
+    separate_longer_delim(`device timestamps`, delim = ",") %>% 
+  filter(`device timestamps` != "")
+
+T_f20_long <- cbind(timestamps_long$`device timestamps`, T_f20_long$temprerature)
+colnames(T_f20_long) <- c("UNIXtime", "tempC")
+T_f20_long <- as.data.frame(T_f20_long)
+
+# leftjoin by UNIX time
+fluxbot20_all <- co2_f20_long %>% 
+  left_join(RH_f20_long, by = "UNIXtime") %>% 
+  left_join(P_f20_long, by = "UNIXtime") %>% 
+  left_join(T_f20_long, by = "UNIXtime")
+# Warning: Detected an unexpected many-to-many relationship between `x` and `y`
+fluxbot20_all <- fluxbot20_all %>% 
+  mutate(co2ppm = as.numeric(co2ppm),
+         pressure = as.numeric(pressure),
+         humidity = as.numeric(humidity),
+         tempC = as.numeric(tempC)) %>% 
+  mutate(Timestamp = as.POSIXct(as.numeric(UNIXtime), origin = "1970-01-01"))
+```
+
+## select the data for LGR comparison: October 10th-13th (outside) and 
+
 ## Process raw data into long-form using custom function in this folder:
+
 ```{r}
 
 ```
 
 ## separate out Newfoundland data from Harvard Forest data:
+
 ```{r}
 
 ```
-
