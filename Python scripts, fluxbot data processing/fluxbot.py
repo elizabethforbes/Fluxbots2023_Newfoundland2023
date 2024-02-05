@@ -22,13 +22,15 @@ treatments = {
     'timber': 'timber harvest gap',
     'insect': 'insect outbreak gap',
     'exclosure': 'moose exclosure',
-    'mature': 'mature forest'
+    'mature': 'mature forest',
+    'test': 'LGR bot comparison'
 }
 
 locations = {
     'TNNP': 'Terra Nova National Park',
     'GMNP': 'Gros Morne National Park',
-    'HF': 'Harvard Forest'
+    'HF': 'Harvard Forest',
+    'Gr': 'Greeley'
 }
 
 # locations = {
@@ -42,6 +44,11 @@ locations = {
 #     'N': 'Northern',
 #     'S': 'Southern'
 # }
+
+locations = {
+    'lgr': 'LGR',
+    'bot': 'fluxbot'
+}
 
 FLUXBOT_VOLUME = 768 # cm^3 of fluxbot 3.0 chamber; estimated using height of chamber once installed, and CAD files of internal fluxbot components
 FLUXBOT_AREA = 81   # cm^2 area of fluxbot 3.0 chamber (4in internal diameter collar)
@@ -253,28 +260,24 @@ class Fluxbot():
         # 1. Split the file between the directory and file name.
         [dir_name, file_name] = file.split('/')[-2:]
 
-        # 2. The block is the first letter of the filename
-        self.block = blocks[file_name[0]]
+        # 2. The block is the first three letters of the filename
+        self.block = blocks[file_name[0:2]]
 
         # 3. Split the file_name to get the treatment.
         [treatment, remainder] = file_name.split('_')
         # Treament is the characters after Block
-        self.treatment = treatment[1:]
+        self.treatment = treatment[3:]
 
         # 4. Split the remainder to get the location.
         [location, ext] = remainder.split('.')
 
-        # 5. Replicate is the last character of the location
-        self.replicate = location[-1]
-
         self.location = locations[location[0:-1]]
 
-        self.title = "{block} {treatment} Plot, {location} Replicate {replicate}".format(
+        self.title = "{block} {treatment} {location}".format(
             block=self.block,
             treatment=self.treatment,
-            location=self.location,
-            replicate=self.replicate)
-
+            location=self.location)
+            
     def get_event(self, number=None):
         """
         Returns an event corresponding to the event number
@@ -291,28 +294,43 @@ class Fluxbot():
             infer_datetime_format=True
         )
 
-        # before sorting the data by timestamp, because the data were concatenated in random order, remove all the second-row
-        # duplicates of column Unix.Epoch.Time. These occurred at the start of each flux event because a measurement was taken
-        # at the same time right before the box closed, and right after.  Here, we're deleting the first row at
-        # the start of each flux event.
-        df = df.drop_duplicates(subset='Unix.Epoch.Time', keep='first')
-
-        # wahoo! now sort.
+        # sort data by timestamp
         df = df.sort_values(by='Timestamp')
         df = df.set_index(pd.DatetimeIndex(df['Timestamp']))
         df.sort_index(inplace=True)
+        df['hour'] = df['Timestamp'].dt.hour
+        df['minute'] = df['Timestamp'].dt.minute
+        df['second'] = df['Timestamp'].dt.second
 
-        # Find Events in this fluxbot's dataframe.
-        # Step 1. Find the difference of ActuatorState and assign to new column
-        df['StateChange'] = df.ActuatorState.diff()
-        df.loc[df['StateChange'] == -0.9, 'StateChange'] = 0
-        df['StateChange'] = df['StateChange'].fillna(0)
-        df['Obs_Interval'] = round(
-            (df['StateChange'].cumsum()/0.9)).astype('int')
-        df['Flux_Event'] = 0
-        df['Flux_Event'] = np.where(
-            df.ActuatorState == 0, df['Obs_Interval'].values, df['Flux_Event'].values
-        )
+        
+        # Find events in dataframe, by time:
+        # Step 1: identify start and end times for observation intervals
+        start_condition = (df['minute'] == 56) & (df['minute'] == 0)
+        end_condition = (df['minute'] == 59) & df(['minute'] == 59)
+        # Step 2: create new column 'observation interval' combining hour and minute
+        df['time_interval'] = df['hour'].astype(str).str.zfill(2) + ':' + df['minute'].astype(str).str.zfill(2)
+        # Step 3: create a new data frame for start timestamps...
+        start_times = df[start_condition][['timestamp', 'time_interval']].rename(columns={'timestamp': 'start_timestamp'})
+        # ...and for end timestamps
+        start_times = df[start_condition][['timestamp', 'time_interval']].rename(columns={'timestamp': 'start_timestamp'})
+        # Step 4: merge start and end dataframes based on the 'time_interval' column
+        result_df = pd.merge(start_times, end_times, on='time_interval', how='inner')
+        
+        df['Flux_Event'] ==
+
+
+
+#        # Find Events in this fluxbot's dataframe.
+#        # Step 1. Find the difference of ActuatorState and assign to new column
+#        df['StateChange'] = df.ActuatorState.diff()
+#        df.loc[df['StateChange'] == -0.9, 'StateChange'] = 0
+#        df['StateChange'] = df['StateChange'].fillna(0)
+#        df['Obs_Interval'] = round(
+#            (df['StateChange'].cumsum()/0.9)).astype('int')
+#        df['Flux_Event'] = 0
+#        df['Flux_Event'] = np.where(
+#            df.ActuatorState == 0, df['Obs_Interval'].values, df['Flux_Event'].values
+#        )
 
         # Smooth the data we will be using for analysis:
         # df['Raw.CO2.PPM'] = self.smooth(
@@ -414,7 +432,7 @@ class Fluxbot():
                     df['treatment'] = self.treatment
                     df['block'] = self.block
                     df['location'] = self.location
-                    df['replicate'] = self.replicate
+#                    df['replicate'] = self.replicate
                     df_list.append(df)
             else:
                 df = event.output()
@@ -424,7 +442,7 @@ class Fluxbot():
                 df['treatment'] = self.treatment
                 df['block'] = self.block
                 df['location'] = self.location
-                df['replicate'] = self.replicate
+#                df['replicate'] = self.replicate
                 df_list.append(df)
         self.output = pd.concat(df_list)
 
@@ -749,14 +767,14 @@ class Event():
             return 1000
         else:
             qaqc = 0
-            dP = data['Pressure'].max()-data['Pressure'].min()
-            dT = data['Temp'].max()-data['Temp'].min()
-            CO2 = data['Raw.CO2.PPM'].max()
-            dCO2 = data['Raw.CO2.PPM'].max() - data['Raw.CO2.PPM'].min()
-            sCO2 = data['Raw.CO2.PPM'][-1] - data['Raw.CO2.PPM'][0]
+            dP = data['pressure'].max()-data['pressure'].min()
+            dT = data['tempC'].max()-data['tempC'].min()
+            CO2 = data['co2'].max()
+            dCO2 = data['co2'].max() - data['co2'].min()
+            sCO2 = data['co2'][-1] - data['co2'][0]
             mCO2 = (
-                data['Raw.CO2.PPM'][-1] > data['Raw.CO2.PPM'].mean()) & (
-                data['Raw.CO2.PPM'][0] < data['Raw.CO2.PPM'].mean())
+                data['co2'][-1] > data['co2'].mean()) & (
+                data['co2'][0] < data['co2'].mean())
             n_obs = len(data)
             if dP > dP_max:
                 qaqc = qaqc + 1

@@ -1,8 +1,10 @@
 {\rtf1\ansi\ansicpg1252\cocoartf2706
 \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;\red251\green2\blue7;\red0\green0\blue0;}
-{\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;\cssrgb\c0\c0\c0;}
-\margl1440\margr1440\vieww11820\viewh8700\viewkind0
+{\colortbl;\red255\green255\blue255;\red251\green2\blue7;\red0\green0\blue0;\red0\green0\blue0;
+\red134\green19\blue62;\red168\green24\blue75;}
+{\*\expandedcolortbl;;\cssrgb\c100000\c14913\c0;\cssrgb\c0\c0\c0;\cssrgb\c0\c1\c1;
+\cssrgb\c60282\c14051\c30968;\cssrgb\c72439\c17643\c36556;}
+\margl1440\margr1440\vieww10920\viewh16960\viewkind0
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
 
 \f0\fs24 \cf2 Notes with Kelly\
@@ -52,4 +54,252 @@ Okay converting data to long form might be a bit trickier than anticipated; I th
 \cf0 \
 \
 Wow ok so I finally (5:20pm) produced a cleaned df for fluxbot 20, but desperately need to come up with a cleaning script in either R or Python to do this iteratively, otherwise I may scream.\cf3 \
+\cf0 ____________________________________________________________________________\
+\cf2 Wednesday, Jan. 10th 2024\
+Notes to self\
+\
+\cf3 Managed to get the fluxbot20 data cleaned and merged with the LGR data; just observing the intervals by hand (plotted through a bunch of them), it looks like the offset is such that starting the flux estimate at 00:56:00 of each hour might be the way to go (for this comparison at least).  It looks like the offsets that they each start at for ambient are different, not sure why (flow-through vs. passive diffusion, maybe?).\
+\
+Okay went through pretty much the entire day\'92s worth of data on the 12th of October (middle day of the outside tests with LGR) and I think it makes sense to just start the interval at 56 of each hour.\
+\
+Ok it\'92s 6:20 and I need to rest.  I am trying to make a startend df that will work with this flux generator I found, but I suspect something is up; I definitely had too many rows in the initial call (with my logic in tidy, I gathered up a bunch of \'93start\'94 times that were actually \'93end\'94 times so need to make a startend doc that is true to the actual number of starts and ends for each hour)\
+\
+Ask chat GPT to convert our python script into R\cf0 \
+____________________________________________________________________________\
+\cf2 Thursday, Jan. 11th 2024\
+Notes to self\
+\
+\cf3 By the end of the day, I couldn\'92t get the startend document made the way I want.  Going to ask Chat GPT to help me make that, and also to help me convert the python script to R (will want that for a future package anyway).\
+\
+Ok so I managed to produce a function that makes linear and quadratic regressions for each of the LGR intervals, but not the fluxbot.  This is because the time intervals don\'92t match up quite; the LGR data is every 1s, and the bot data is every 6s.\
+\
+Ok so having an issue with the finding the nearest timestamp thing.\
+\
+Ok so the functions that create the start and end indices for each row are somehow creating indices from the 1970s. Not sure why, when it should just be identifying the index in the data\'92s timestamp column that is closest to the one in the reference timestamp column. Maybe I can fix this?\
+- ok so it seems to identify the REFERENCE ROW NUMBER of the timepoint as written\
+\
+Ok so the timestamps are fine.  It\'92s the actual regression that\'92s an issue; for some reason it\'92s returning tons of NA values for both linear and quadratic regression.\
+\cf0 ____________________________________________________________________________\
+\cf2 Friday, Jan. 12th 2024\
+Notes to self\
+\
+\cf3 Okay the regression is the issue.  Time to investigate!\
+\
+\cf2 \
+\cf3 note: the current function (with \'93frequency\'94) may extract the last six values of the fluxbot data, not the frequency.   Is confusing.\
+\
+Ok so the issue is that there is a problem with the timestamps being too big!  The regressions can\'92t run properly with predictor variables that large, as squaring them swamps out the signal of the other variables.  According to the internet anyway (answer #2 here https://stats.stackexchange.com/questions/25804/why-would-r-return-na-as-a-lm-coefficient)\
+\
+Ok so by centering the data (by subtracting out the min(timestamp) from each timestamp in an observation interval) \
+\
+Also the code that extracts out the fluxbot data is not right; it just takes the first six observations from an observation interval and assigns them the first six seconds in the minute\'85\cf2 \
+\cf0 ____________________________________________________________________________\
+\cf2 Tuesday, Jan. 16th 2024\
+Notes to self\
+\
+\cf3 Everything sucks and is difficult!\cf2 \
+\cf0 ____________________________________________________________________________\
+\cf2 Wednesday, Jan. 17th 2024\
+Notes to self\cf3 \
+\cf0 ____________________________________________________________________________\
+\cf2 Thursday, Jan. 18th 2024\
+Notes to self\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf4 End of day: finally managed to get a good function built for custom intervals (aka I produced a custom startend df for the bot data, too). I got the coefficients for linear and quadratic regression for each method.\
+\
+TOMORROW:\
+- write these to a df with associated timestamp (end)\
+- compare fluxbot vs. LGR linear, then quadratic slopes and get R-squared for each\
+- send to team\
+ \
+THEN: work on converting values to mass/getting real flux estimates\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 ____________________________________________________________________________\
+\cf2 Friday, Jan. 19th 2024\
+Notes to self\
+\
+Meeting with Jon and Connor IRT \cf4 \
+Could correct our data with Ravish\'92s machine learning algorithm\
+\
+OR we could refer to it super quickly and refer to papers where those are corrected (K30 specifically) and include the figure in the supplement\
+\
+The important thing is the validation of fluxes; could look at relative error of fluxes\
+\
+Connor: would like to split up the raw concentration graphs into regimes \
+- this is where boxplot is helpful\
+\
+Generational update: of the fluxbot, via the OpenChamber software\
+- get a graph of the network transmissions from Particle dashboard\
+Panel a: photo of the fluxbots in the HF deployment\cf2 \
+\cf3 Panel b: map of cell coverage at deployment site\cf4 \
+Panel b: network transmission for chosen time period\
+Panel c: plot of raw co2ppm data from HF deployment for chosen time period\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf5 Reach out to Jynae for transmission data: \'93fleet or SIM data usage\'94 for the HF deployment\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf4 \
+HF paper: can fluxbots capture landscape variation and what do we learn about the ecology of the system as a result?\cf3 \
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf6 ELIZABETH: Upload GPS points to drive if not already there!\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf3 \
+RELATED WORK: describe current design space (Jon and Elizabeth)\
+\
+Open-closed box for Jon: make a rigid enclosed PVC chamber (\'85discuss this in a few weeks)\
+\
+\
+Could it be THAT THE REASON I HAVE A HANDFUL OF WONKY REGRESSION BETAS IS BECAUSE SOME OF OUR DATA WERE TAKEN AFTER THE BOT OPENED (VERY FEW BUT STILL)?\
+- no just a handful had data over 3k\
+\
+Meeting with Richard:\
+- struggle to pay for a patent\
+	- don\'92t want to have to deal with the costs (would rather the University deals with it)\
+	- patentability is difficult\
+- Yale\'92s position is wanting to help get an impact\
+	- if a patent is useful, and there\'92s a glimmer of a chance that someone will pay for it, go for it\
+	- need to have a proper look at the patentability\
+	- needs to make sure that someone sees this as commercializable\
+	- Yale will pay for it, but expects me to find a partner that will reimburse the patent costs eventually\
+- costs:\
+	- low to start with (1-5k initially) (probably 5k)\
+	- 1yr later, when it converts to a regular application, it\'92s 10-15k\
+	- after that, it\'92s variable depending on the number of claims\
+		- 10k or so to get it through the prosecution side of it\
+	- if you get it granted, there are annuities (yearly maintenance for the 20yrs of validity every 4yrs)\
+	- TOTAL: 40-50k over their life\
+- usually the patent office would want the licensing model to cover at least the patent and also provide some kind of renumeration for the investors and their labs\
+- Step 1: find something patentable (doesn\'92t drive the project, but does enable it)\
+- Step 2: meet with the attorneys and get something started (a disclosure form, etc.)\
+\
+If we find something patentable within a week, then a week for getting attorneys on board, then a few weeks to write things up\
+- 1.5mos at the earliest\
+- March \
+\
+novelty: need to come up with a 1-2 sentences describing what the patentability is\
+- once we\'92ve landed on that, let\'92s file it\
+- could *give* the design to PP Systems, but after that they\'92d need to pay back the patent\
+\
+Advantages of something over something else is not patentable; engineering is not patentable\
+- what is unanticipated, or not obvious?\
+	- people in my field could have anticipated that I could build this\
+- so the advantages are a side effect of the thing we\'92re going to patent\
+- the thing we\'92re going to patent is gotta be NEW NEW\
+- it\'92s hard to overcome obviousness rejection\
+- could do a \'93combination claim\'94 where we don\'92t claim novelty on ONE thing\
+	- instead, we say something like \
+	- a rocket with two stages: not just a rocket, but a rocket that splits into two stages\
+	- the combination is the claim: why has nobody done this before?\
+\
+Is there a closed chamber system with a diffusion based sensing mechanism?\
+- it\'92s scaleable bc it\'92s lower cost\
+	- is this surprising? No. \
+	- \
+\
+Alternatives to patents:\
+- getting people the blueprints and get a head start on \
+- could get them to agree to pay royalties for the product\
+\
+What are you teaching me/the public?\
+	- where to put it, or how fast to flow this, or etc.?\
+For each point about what am I teaching:\
+	- why was this not anticipated? Why does this work in ways that weren\'92t predictable?\
+What\'92s new?\
+	- why is that surprising?\cf0 \
+____________________________________________________________________________\
+\cf2 Tuesday, Jan. 23rd 2024\
+Notes to self\
+\cf0 ____________________________________________________________________________\
+\cf2 Wednesday, Jan. 24th 2024\
+Notes to self\
+\
+\cf3 Lol at total lack of work yesterday. In my defense I was moving into the new place?  And felt compelled to go to IKEA.  Must go where the IKEA gods are sending me. (To IKEA.)\
+\
+Practice sentences for Richard. What is the patentability of the product?\
+\
+Combination claim: What is unexpected about our design?\
+- passive-diffusion based closed chamber system\
+	- sensor position in the lid upside-down with teflon cover, versus flow-through system\
+	- improves its independence (e.g. individual units disconnected from others in physical network)\
+	- achieves fast response time to change in CO2 without relying on a pump\
+	- reduces likelihood of failure due to fewer moving parts in sensing mechanism \
+		- especially in challenging environments, which is the goal\
+- IoT of software platform (OpenChamber)\
+	- most IoT are wearables or medical devices; we\'92re deploying an IoT platform for long-term 	environmental monitoring\
+	- an IoT platform that is designed to be robust to long-term outdoor use is uncommon\
+	- resolves problems associated with long-term data collection IRT real time data transmission\
+- combination of both physically robust (and additionally, inexpensive) physical design with IoT platform results in a highly replicable chamber system that is capable of being deployed at higher-than-previously-possible spatial resolutions and extents. While other distributed array sensing systems exist, the cost difference (which is possible due to the design, see point 1) means that a fluxbot array can be deployed to ask much more comprehensive questions about the various environmental mechanisms behind differences in soil carbon emissions rates across large areas. The connectivity also means that researchers can determine immediately (by monitoring the data as it comes in) which fluxbots in the array require attention, making the maintenance of the array much easier since it doesn\'92t require physical inspection of every single fluxbot in the field to determine if any need repairs.\
+\
+The fluxbot is an innovative, IoT-enabled device that measures soil carbon dioxide emissions rates using a closed-chamber design. IoT platforms are used extensively in wearable or biomedical device applications; closed-chamber systems for monitoring the rates of gas emissions from the soil to the atmosphere are also well established. However, the fluxbot\'92s innovation lies in a combination of design choices that make it superior to existing options on the market for large-scale, high resolution monitoring of soil carbon emissions in remote, logistically and environmentally challenging, and thus understudied ecosystems (see Forbes et al. 2023). This is critically important as scientists increasingly recognize the many and varied mechanisms that drive changes in soil carbon emissions rates, like changes to the wildlife community (see \'93Animating the Carbon Cycle\'94, Schmitz et al. 2014), that a dearth of data results in assumptions that limit our collective abilities to create effective conservation policies and recommendations (see Forbes et al. 2023, Ellis-Soto et al. 2023) and that historically we have not collected soil carbon cycle data at small enough scales to capture heterogeneity and the mechanisms that drive it (see Ferraro, Schmitz, and McCary 2021).\
+\
+However, the fluxbot\'92s infrared gas analyzer is installed on a custom sensor rig perpendicular to the chamber\'92s lid, and upside down (protecting it from rainfall) and is therefore using a passive-diffusion approach to detect changes in CO2 inside the closed chamber. \
+\
+This fluxbot design is therefore superior to commercially-available designs for high-resolution, remote deployment applications. Because the sensor relies on passive diffusion (and not a pump-and-fan-based flow-through system that delivers air from the chamber to the sensor, which is stored outside the chamber in climate-controlled containment), we have created a single-chamber system that is independent (e.g. not yoked to an array of other chambers by a single sensor that monitors them each in turn via flow-through pumps); an array of fluxbots is thus able to monitor multiple sites simultaneously, rather than in succession. \
+\
+update: wrote a desc, sent to Richard (11am)\
+\
+\
+Finished the conversion to mass, estimates of flux function in R; however, it produced estimates that I\'92m not sure are accurate.  Figure this out tomorrow; it\'92s possibly just a math conversion error somewhere in the pipeline.\
+\cf0 ____________________________________________________________________________\
+\cf2 Tuesday, Jan. 30th 2024\
+Notes to self\cf3 \
+\
+Exploring the results of the function, making sure my conversion is correct at each step to identify where it went wrong (currently, fluxes in umol/m2/sec are WAY too high).\
+\
+Compared to Mpala data:\
+- betas are looking okay\
+- delta CO2 in kgs are in the right realm (e.g. very small values)\
+\
+Had the function report \'91length interval\'92 in seconds and the number is VERY small, like 4.  So I think that the length interval is being reported in minutes, weirdly.  Gotta fix that throughout.\
+\
+Tried to fix it and IDK what happened\
+- ok figured that out; tried to use \'91start index\'92 and \'91end index\'92 for the interval length but it\'92s 40 (because those are the number of rows, not the actual UNIX timestamps associated with them)\
+\
+\
+So I actually wonder if this conversion has more to do with the conversion to kg?  I wonder if I\'92m getting that wrong?\
+\
+It was indeed in the conversion to kg; I got a denominator wrong!!\
+\
+WOOHOO GOT THE FLUX ESTIMATES!!\
+Double check timing tomorrow (e.g. can we just do total seconds elapsed not minutes * 60) and need to adjust the volume (adding LGR volume and tubing)\
+\cf0 ____________________________________________________________________________\
+\cf2 Wednesday, Jan. 31st 2024\
+Notes to self\cf3 \
+\
+Had meeting with Donna, Karen regarding finances; meeting with Os; made figures for flux estimates (preliminary) (will make additional figures later for Connor)\
+\cf0 ____________________________________________________________________________\
+\cf2 Thursday, Feb. 1st 2024\
+Notes to self\cf3 \
+\
+Making figures of flux estimates for Connor\'92s engineering paper\
+A: raw data\
+B: comparison of flux methods with correlation coefficient (R2)\
+C: box plots of flux estimates, by method and other categories\
+\
+6:15pm done!  Just gotta finish reading the draft tomorrow and then it\'92s good to go.  And inputting in the figure.  And making supplemental figures?  Idk\
+\
+\cf0 ____________________________________________________________________________\
+\cf2 Friday, Feb. 2nd 2024\
+Notes to self\cf3 \
+\
+Updated the figure and inserted it into Connor\'92s overleaf document.  Went through and provided edits and feedback. Needs lots of work. Big notes:\
+\
+1) need to differentiate between fluxbot and OpenChamber, his chosen name for this platform I guess\
+2) how much ecosystems stuff do we actually need?  We can maybe cut down on this\
+3) same for the section on existing methods; not sure how useful this is in a big way, perhaps can make this shorter than originally planned.\
+4) need to add more detail on how we estimate fluxes using raw data\
+5) order of operations is a little fucked up currently so need to do some cut and pasting\
+6) need to add WAY more references and need to reference the figures throughout more effectively\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
 }
