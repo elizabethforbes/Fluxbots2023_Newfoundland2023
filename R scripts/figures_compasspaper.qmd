@@ -70,7 +70,7 @@ a_inset <- lgr_bot20 %>%
     ggplot() +
     geom_point(aes(x = Time, y=CO2ppm, color=method),
                alpha = 0.5) +
-  ylab("")+
+  ylab(bquote(~CO[2]*" concentration, ppm"))+
   xlab("")+
   labs(title="Oct. 12, 1pm observation interval")+
   scale_color_manual(values = c("CO2ppm" = "deeppink4","co2"= "coral1"),
@@ -78,20 +78,39 @@ a_inset <- lgr_bot20 %>%
                      labels = c("fluxbot", "LGR"))+
       theme_classic()+
   # theme(axis.text.x = element_text(angle = 25, vjust = -0.025))+
-    theme(legend.position = "none",
-          plot.title = element_text(size = 10))
+geom_vline(xintercept = as.integer(as.POSIXct("2023-10-12 12:55:00")),
+           linetype = "dashed",
+           color = "springgreen4",
+           size = 1)+
+  geom_vline(xintercept = as.integer(as.POSIXct("2023-10-12 12:56:00")),
+             linetype = "dashed",
+             color = "steelblue4",
+             size = 1)+
+    theme(legend.position = c(0.09,0.8), legend.title = element_blank())
 
 a_inset
 
 
-a <- a+inset_element(a_inset, left = .55, right = 0.95, top = 1, bottom = 0.6,
-                align_to = "full")
-a
+# a <- a+inset_element(a_inset, left = .55, right = 0.95, top = 1, bottom = 0.6,
+                # align_to = "full")
+# a
 ```
 
 Figure portion b): flux estimate comparisons between LGR, bot 20:
 
 ```{r}
+# results_mass_lgr_bot$method <- relevel(factor(results_mass_lgr_bot$method), ref= "LGR")
+mylm <- lm(results_mass_lgr_bot_wide$fluxL_umolm2sec_fluxbot~ 
+             #treating fluxbot estimates as "y" axis as that's their location in the plot, and in the correlation
+             results_mass_lgr_bot_wide$fluxL_umolm2sec_LGR, 
+           # treating lgr estimates as "x" axis for same reason
+           data=results_mass_lgr_bot_wide)
+summary(mylm)
+my_eq <- scales::comma(mylm$coefficients,accuracy = 0.001)
+my_eq_text <- paste0("y = ", my_eq[[1]], " + ",my_eq[[2]],"x")
+
+
+
 b <- results_mass_lgr_bot_wide %>% 
   na.omit() %>% # remove those LGR observations that do not have a paired fluxbot observation
   ggplot(aes(x=fluxL_umolm2sec_LGR, y=fluxL_umolm2sec_fluxbot))+
@@ -100,8 +119,10 @@ b <- results_mass_lgr_bot_wide %>%
   xlab(expression(paste("flux estimate LGR, ",mu, "mol m"^-2, "s"^-1)))+
   ylab(expression(paste("flux estimate fluxbot, ",mu, "mol m"^-2, "s"^-1)))+
   stat_smooth(method = "lm", color = "red", size = 1)+
-  stat_regline_equation(label.x = 0.25, label.y = 6.5)+
-  stat_cor(aes(label=..rr.label..), label.x = 0.25, label.y = 6, digits = 3)
+  # stat_regline_equation(label.x = 0.25, label.y = 6.5)+
+  annotate(geom="text", x=1, y=7.5, label = my_eq_text)+ # wanted to add more sig figs to the lm equation
+  # stat_cor(aes(label=..rr.label..), label.x = 0.25, label.y = 6, digits = 3)
+  stat_cor(method = "spearman", p.accuracy = 0.001, r.accuracy = 0.0001)
 
 b
 ```
@@ -144,7 +165,10 @@ c
 All together now:
 
 ```{r}
-fig <- ggarrange(a, b, c,
+# fig <- ggarrange(a, b, c,
+                 # labels = c("a)", "b)", "c)"),
+                 # ncol = , nrow = 3)
+fig <- ggarrange(a_inset, a, b,
                  labels = c("a)", "b)", "c)"),
                  ncol = , nrow = 3)
 fig

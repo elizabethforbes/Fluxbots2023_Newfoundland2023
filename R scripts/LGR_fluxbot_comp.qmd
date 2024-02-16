@@ -4,6 +4,15 @@ format: html
 editor: visual
 ---
 
+# This document was used to develop R functions to process both single and lists of dataframes of long-form fluxbot-collected CO2, RH, T, and P data into estimates of flux.
+
+Libraries:
+
+```{r}
+library(tidyverse)
+library(ggpubr)
+```
+
 ## LGR and fluxbot comparison: LGR plugged into fluxbot 20 chamber for direct comparison of fluxes, raw data collection
 
 Import LGR data from same time period:
@@ -242,9 +251,12 @@ Custom function for estimating fluxes with conversion of CO2ppm to mass includin
 ```{r}
 # function to convert iterative observation intervals of co2 accumulation over 4min time periods (in concentration, ppm) to units of co2 mass accumulation; the function uses ideal gas laws and a humidity correction to convert from ppm to kg co2. Once converted, the function then takes both a linear and quadratic regression of each accumulation interval, and uses the resultant slopes (beta values) to calculate a rate of increase in CO2 over time, per unit area.
 
+# current volume of fluxbot: 768cm3
+# current area of fluxbot: 81 cm2
+
 # currently the function requires an input of the time series dataframe itself, a custom intervals dataframe (two columns, one labeled "Start" and one labeled "End" with each row indicating the ideal start and end of each interval in the time series df in POSIXct format), and an indication of the method (e.g. is it "LGR" or "fluxbot" generated data).
 
-calculate_regressions_custom_intervals <- function(time_series_df, custom_intervals_df, method) {
+calculate_regressions_custom_intervals <- function(time_series_df, custom_intervals_df, method, volume, area) {
   # Extract timestamp and data columns from the time series dataframe
   timestamp_col <- as.POSIXct(time_series_df$Time, format = "%Y-%m-%d %H:%M:%S", tz = "America/New_York")
   data_col <- time_series_df$co2     
@@ -266,8 +278,8 @@ calculate_regressions_custom_intervals <- function(time_series_df, custom_interv
     R_m = 8.314472  # Ideal gas constant for mass [(m3*Pa)/(K*mol)]
     R_specific <- 287.058 # specific gas constant for dry air (J/kg*K)
     mol_mass <- 28.9628 # molar mass dry air, g/mol
-    volume <- 768 # cm3; volume of fluxbot chamber
-    area <- 81 # cm2; area of soil that fluxbot collar encompasses
+    volume <- volume # cm3; volume of fluxbot chamber
+    area <-  area # cm2; area of soil that fluxbot collar encompasses
     g_per_mol = 44.009 # molar mass of CO2, g/mol
 
   # Loop through each row in the custom intervals dataframe to ID the start and end point of each interval
@@ -392,11 +404,13 @@ calculate_regressions_custom_intervals <- function(time_series_df, custom_interv
 Try using custom function with conversion to mass, above:
 
 ```{r}
-# fluxbot estimates:
-results_mass_bot <- calculate_regressions_custom_intervals(bot_intervals, startend_bot_closest, "fluxbot")
+# fluxbot estimates: added volume due to LGR tubing and cavity (total = 0.141L = 141cm3)
+results_mass_bot <- calculate_regressions_custom_intervals(bot_intervals, startend_bot_closest, "fluxbot",
+                                                           volume = (768+141), area = 81)
 
-# lgr estimates: ~5s to complete
-results_mass_lgr <- calculate_regressions_custom_intervals(lgr_intervals, startend, "LGR")
+# lgr estimates: ~7s to complete
+results_mass_lgr <- calculate_regressions_custom_intervals(lgr_intervals, startend, "LGR",
+                                                           volume = (768+141), area = 81)
 ```
 
 # merge resulting datasets by nearest timestamp:
